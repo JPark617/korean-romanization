@@ -1,7 +1,7 @@
 """
 Creator: Justin Park
 Email: justin.s.park77@gmail.com
-Last Updated: December 1, 2022
+Last Updated: March 21, 2023
 
 This script initializes the romanize() function, which takes in a string of Hangul characters
 and outputs a proper romanization, obeying most sound change rules including nasalizations,
@@ -175,7 +175,7 @@ def romanize_word(word):
             
         phoneme_list.append('-')
 
-    # sound changes
+    # first round of sound changes
     for syllable in range(len(word) - 1):
         prev_final = 4*syllable + 2
         next_initial = 4*syllable + 4
@@ -187,12 +187,18 @@ def romanize_word(word):
         two_syllable = word[syllable : syllable + 2]
         three_syllable = word[syllable : syllable + 3]
 
-        # special case: 맛없- becomes '맡 없'
+        # special case: 맛없- becomes '마덦-'
         if two_syllable == '맛없':
-            phoneme_list[prev_final] = 't'
+            phoneme_list[prev_final] = ''
+            phoneme_list[next_initial] = 'd'
             continue
 
-        # special case: 절대- becomes '절때'
+        # special case: 여권 becomes '여꿘'
+        if two_syllable == '여권':
+            phoneme_list[next_initial] = 'kk'
+            continue
+
+        # special case: 절대 becomes '절때'
         if two_syllable == '절대':
             phoneme_list[next_initial] = 'tt'
             continue
@@ -329,7 +335,7 @@ def romanize_word(word):
         # deal with standard cases
         phoneme_list[prev_final] = final_change + final_carry
 
-    # more sound changes
+    # second round of sound changes
     for syllable in range(len(word)):
         initial = 4*syllable
         vowel = 4*syllable + 1
@@ -340,18 +346,15 @@ def romanize_word(word):
 
         if phoneme_list[final] in ('g', 'gs', 'rg', 'k', 'kk'):
             phoneme_list[final] = 'k'
-            if always_tense:
-                tense = True
+            tense = always_tense
 
         elif phoneme_list[final] in ('n', 'nj', 'nh'):
-            if phoneme_list[final] == 'nj':
-                tense = True
+            tense = (phoneme_list[final] == 'nj')
             phoneme_list[final] = 'n'
 
         elif phoneme_list[final] in ('d', 's', 'ss', 'j', 'ch', 't', 'h'):
             phoneme_list[final] = 't'
-            if always_tense:
-                tense = True
+            tense = always_tense
 
         elif phoneme_list[final] == 'r':
             phoneme_list[final] = 'l'
@@ -366,8 +369,6 @@ def romanize_word(word):
             tense = True
 
         elif phoneme_list[final] == 'rb':
-            rb_special = True
-
             # special cases for ㄼ
             if phoneme_list[initial] == 'b' and phoneme_list[vowel] == 'a':
                 phoneme_list[final] = 'p'
@@ -376,33 +377,29 @@ def romanize_word(word):
                     phoneme_list[final] = 'p'
                 elif phoneme_list[initial + 4] == 'j' and phoneme_list[vowel + 4] in ('eo', 'oo'):
                     phoneme_list[final] = 'p'
-                else:
-                    rb_special = False
-            else:
-                rb_special = False
 
-            # ㄼ becomes ㄹ in the special case
+            # flag that indicates if we entered a special case
+            rb_special = (phoneme_list[final] == 'p')
+
+            # ㄼ becomes ㄹ by default
             if not rb_special:
                 phoneme_list[final] = 'l'
 
-            # ㄼ always tenses the next consonant (regardless of it becomes 'ㅍ' or 'ㄹ' but for different reasons)
-            if always_tense or not rb_special: # decide whether or not we actually want to include the tensing in our output
-                tense = True
+            # ㄼ always tenses the next consonant (regardless of if it becomes 'ㅍ' or 'ㄹ')
+            # but always_tense decides if we include the in our output for the special 'ㅍ' cases
+            tense = always_tense or not rb_special 
 
         elif phoneme_list[final] in ('rm', 'm'):
-            if phoneme_list[final] == 'rm':
-                tense = True
+            tense = (phoneme_list[final] == 'rm')
             phoneme_list[final] = 'm'
 
         elif phoneme_list[final] in ('b', 'pp', 'p'):
             phoneme_list[final] = 'p'
-            if always_tense:
-                tense = True
+            tense = always_tense
 
         elif phoneme_list[final] in ('bs', 'rb', 'rp'):
             phoneme_list[final] = 'p'
-            if always_tense:
-                tense = True
+            tense = always_tense
 
         # tensing - some of these rules should depend on whether the final-consonant obstruent is the end of a word stem, but oh well
         if tense and initial + 4 < len(phoneme_list):
@@ -513,8 +510,8 @@ print(romanize("밝 밞 밝은 곳으로 갑쇼"))                      # genera
 print(romanize("밟는 앞문 부엌문 낮말 낱말 학년 꽃나무 죽었니"))  # nasalization
 print(romanize("곧이듣다 얹히다 받히다 닫혀"))                  # palatalization
 print(romanize("남루하다 대통령 박람회 합력 설날 안락하다"))      # ㄹ assimilation
-print(romanize("좋다 입학 넓히다 싫소 옳지 싫다"))              # aspiration
-print(romanize("네가 맛을 보면 꽃잎이 맛없다고 할거야"))         # special cases
+print(romanize("좋다 입학 넓히다 싫소 옳지 싫다"))               # aspiration
+print(romanize("네가 꽃잎의 맛을 보면 여권이 맛없다고 할거야"))   # special cases
 print(romanize("그래요? 와, 진짜 멋지네요! 참..."))            # clause-final punctuation
 print(romanize("\"종이접기\"라는 '취미'예술"))                 # quotation marks
 print(romanize("   "))                                      # edge case
@@ -523,7 +520,7 @@ print(romanize("   "))                                      # edge case
 # exceptions: currently non-functional
 
 """
-print(split_hangul("안다 의견란 여권"))
+print(split_hangul("안다 의견란"))
 """
 
 # considerations
