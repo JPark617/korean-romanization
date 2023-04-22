@@ -1,7 +1,7 @@
 """
 Creator: Justin Park
 Email: justin.s.park77@gmail.com
-Last Updated: April 20, 2023
+Last Updated: April 21, 2023
 
 This script initializes the romanize() function which takes in a string of Hangul characters
 and outputs a proper romanization, obeying most sound change rules including nasalizations,
@@ -24,6 +24,8 @@ https://www.korean.go.kr/front/onlineQna/onlineQnaView.do?mn_id=216&qna_seq=8805
 
 Not all sound change rules have been implemented; in particular, some rules which require an
 understanding of the semantics of the text are not fully considered for sake of simplicity.
+This code will probably also break spectacularly on certain newer words such as internet slang,
+text speak, abbreviations, and foreign loanwords.
 
 Learn how to pronounce the romanized text with this handy guide:
 https://docs.google.com/document/d/1XNkx1R6ImgwYNysgWlGWjXfG1Xzb6qSvdctRAhZvpis/edit?usp=sharing
@@ -196,9 +198,9 @@ def romanize_word(word):
         if phoneme_list[prev_final] == 'x' or phoneme_list[next_initial] == 'x':
             continue
 
-        next_syllable = word[syllable + 1]
         two_syllable = word[syllable : syllable + 2]
-        three_syllable = word[syllable : syllable + 3]
+        next_syllable = word[syllable + 1]
+        next_two_syllable = word[syllable + 1 : syllable + 3]
 
         # special case: 맛없- becomes '마덦-'
         if two_syllable == '맛없':
@@ -216,13 +218,14 @@ def romanize_word(word):
             phoneme_list[next_initial] = 'tt'
             continue
 
-        # special case: semantic ㅇ linking
+        # special case: semantic ㅇ linking for compound words where the first half ends in a consonant
+        # and the second (semantically meaningful) half begins with 야, 여, 요, 유, 이
         # (e.g., 꽃잎 becomes '꼰닢', 색연필 becomes '생년필')
-        # N.B. it's hard to generalize this because it depends on semantics
-        if next_syllable in ('역', '잎') or two_syllable in ('맨입', '콩엿', '담요', '알약', '물약', '물엿') or three_syllable in ('한여름', '색연필'):
+        # N.B. it's hard to generalize this because it depends on the semantics of the word
+        if two_syllable in ('들일', '막일', '삯일', '맨입', '담요', '알약', '물약') or \
+            phoneme_list[prev_final] != '' and (next_syllable in ('역', '염', '엿', '유', '율', '윷', '잎') \
+                                                or next_two_syllable in ('여름', '여비', '여성', '여우', '연필', '열차', '요기', '이불')):
             phoneme_list[next_initial] = 'n'
-        elif three_syllable == '식용유':
-            phoneme_list[next_initial + 4] = 'n'
 
         # split double consonants in syllable-final position
         if len(phoneme_list[prev_final]) == 0:
@@ -362,7 +365,7 @@ def romanize_word(word):
         # syllable-final consonants
         tense = False
 
-        if phoneme_list[final] in ('g', 'gs', 'rg', 'k', 'kk'):
+        if phoneme_list[final] in ('g', 'kk', 'gs', 'rg', 'k'):
             phoneme_list[final] = 'k'
             tense = always_tense
 
@@ -412,11 +415,11 @@ def romanize_word(word):
             tense = (phoneme_list[final] == 'rm')
             phoneme_list[final] = 'm'
 
-        elif phoneme_list[final] in ('b', 'pp', 'p'):
+        elif phoneme_list[final] in ('b', 'p'):
             phoneme_list[final] = 'p'
             tense = always_tense
 
-        elif phoneme_list[final] in ('bs', 'rb', 'rp'):
+        elif phoneme_list[final] in ('bs', 'rp'):
             phoneme_list[final] = 'p'
             tense = always_tense
 
@@ -517,23 +520,26 @@ def romanize_file(hangul_in, romanized_out):
 # TEST CASES
 
 """
-print(romanize("희망봉에 숨어있는 마법의 학원에 갔어요. 의의의"))   # linking, 의
-print(romanize("맨입 콩엿 담요 물약 솔잎 색연필 서울역 식용유"))   # ㅇ linking
+print(romanize("악 앆 안 앋 알 암 압 앗 았 앙 앚 앛 앜 앝 앞 앟"))  # syllable-final consonants
+print(romanize("앇 앉 않 앍 앎 앏 앐 앑 앒 앓 앖"))               # syllable-final consonant clusters
+print(romanize("희망봉에 숨어있는 마법의 학원에 갔어요. 의의의"))   # ㅇ linking, 의
+print(romanize("밝은 곳에 앉으라면 얇은 값이 않아"))              # ㅇ linking (double consonants)
+print(romanize("맨입 콩엿 담요 물약 솔잎 색연필 서울역 식용유"))   # ㅇ linking (compound words)
+print(romanize("한여름 백분율 밤윷 꽃잎 직행열차 홑이불 불여우"))  # ㅇ linking (more compound words)
+print(romanize("고양이가 공허한 고향으로 괜히 방문했다"))         # ㅎ linking
 print(romanize("없다 없는 없지"))                              # ㅄ
 print(romanize("밟다 밟는 훑다 넓다 넓적하다 넓죽하다 넓둥글다"))  # ㄼ, ㄾ
 print(romanize("외곬만 외곬으로 외곬발 알아 앓아"))              # ㄽ, ㅀ
 print(romanize("앉다 핥다 넋과 밞다"))                         # tensing
-print(romanize("고양이가 공허한 고향으로 괜히 방문했다"))         # ㅎ linking
-print(romanize("Korean is fun!  Tee샤츠"))                   # non-Korean
-print(romanize("밝 밞 밝은 곳으로 갑쇼"))                      # general
 print(romanize("밟는 앞문 부엌문 낮말 낱말 학년 꽃나무 죽었니"))  # nasalization
 print(romanize("곧이듣다 얹히다 받히다 닫혀"))                  # palatalization
 print(romanize("남루하다 대통령 박람회 합력 설날 안락하다"))      # ㄹ assimilation
 print(romanize("못생긴 햇살을 먹겠습니다. 맞습니다."))           # ㅅ/ㅆ assimmilation
-print(romanize("좋다 입학 넓히다 싫소 옳지 싫다"))               # aspiration
-print(romanize("네가 꽃잎의 맛을 보면 여권이 맛없다고 할거야"))   # special cases
-print(romanize("그래요? 와, 진짜 멋지네요! 참..."))            # clause-final punctuation
-print(romanize("\"종이접기\"라는 '취미'예술"))                 # quotation marks
+print(romanize("좋다 입학 넓히다 싫소 옳지 싫다"))              # aspiration
+print(romanize("네가 맛을 보면 여권이 절대 맛없다고 할거야"))     # special cases
+print(romanize("그래요? 와, 진짜 멋지네요! 참..."))             # clause-final punctuation
+print(romanize("\"종이접기\"라는 '취미'예술"))                  # quotation marks
+print(romanize("Korean is fun!  Tee샤츠"))                   # non-Korean
 print(romanize("   "))                                      # edge case
 """
 
@@ -541,7 +547,7 @@ print(romanize("   "))                                      # edge case
 
 """
 print(split_hangul("안다 안고 감다 감고 신다 신고 참다 참고"))  # semantic tensing
-print(split_hangul("의견란"))
+print(split_hangul("의견란 영업용"))
 
 """
 
