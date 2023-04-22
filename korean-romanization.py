@@ -1,11 +1,17 @@
 """
 Creator: Justin Park
 Email: justin.s.park77@gmail.com
-Last Updated: March 21, 2023
+Last Updated: April 2, 2023
 
-This script initializes the romanize() function, which takes in a string of Hangul characters
+This script initializes the romanize() function which takes in a string of Hangul characters
 and outputs a proper romanization, obeying most sound change rules including nasalizations,
 palatalizations, assimilations, linking, and syllable-final de-voicing/de-aspiration.
+
+Our romanization scheme modifies the Revised Romanzation of Korean (RR), the most commonly
+used and widely accepted Korean romanzation scheme worldwide. Importantly, RR strikes a balance
+between how the Hangul is written and how the spoken Korean sounds. Naturally, this comes with
+its benefits and drawbacks. The purpose of this script is to lean completely in one direction,
+prioritizing accurate transcription of speech over accurate transliteration of writing.
 
 As of 2022 Oct 9, this file also contains a romanize_file() function, which takes in two file
 locations and romanizes any Hangul text in the input file line-by line, writing the resulting
@@ -18,7 +24,13 @@ https://www.korean.go.kr/front/onlineQna/onlineQnaView.do?mn_id=216&qna_seq=8805
 Not all sound change rules have been implemented; in particular, some rules which require an
 understanding of the semantics of the text are not fully considered for sake of simplicity.
 
-N.B. This code may exhibit unexpected behavior on text with punctuation.
+Learn how to pronounce the romanized text with this handy guide:
+https://docs.google.com/document/d/1XNkx1R6ImgwYNysgWlGWjXfG1Xzb6qSvdctRAhZvpis/edit?usp=sharing
+
+Other resources:
+https://en.wikipedia.org/wiki/Korean_language
+https://en.wikipedia.org/wiki/Hangul
+https://en.wikipedia.org/wiki/Revised_Romanization_of_Korean
 
 """
 
