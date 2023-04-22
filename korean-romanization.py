@@ -1,7 +1,7 @@
 """
 Creator: Justin Park
 Email: justin.s.park77@gmail.com
-Last Updated: October 9, 2022
+Last Updated: October 12, 2022
 
 This script initializes the romanize() function, which takes in a string of Hangul characters
 and outputs a proper romanization, obeying most sound change rules including nasalizations,
@@ -22,16 +22,30 @@ N.B. This code may exhibit unexpected behavior on text with punctuation.
 
 """
 
+# situational romanization preferences
+
+na_neo_ye = True        # romanize 나의 and 너의 as "na-ye" and "neo-ye" respectively (common in sung Korean)
+ni_ga = True            # romanize 네가 as "ni-ga" (common in spoken Korean)
+
+
+# purely aesthetic romanization preferences
+
 show_h = 0              # 0 = don't show, 1 = show as "ʰ", 2 = show as "h"
 show_hada_h = True      # toggle showing "h" for 하다, 한, 했다, etc.
                             # only matters if show_h == 0
 sh = False              # romanize ㅅ as "sh" when preceding ㅣ, ㅑ, etc.
 oo = False              # toggle to romanize the vowel ㅜ as "oo" instead of "u" (and likewise for ㅠ, but not ㅟ)
 ee = False              # toggle to romanize the vowel ㅣ as either "ee" or "i" (and likewise for ㅟ, but not ㅚ or ㅢ)
+
+
+# optional non-standard romanization enhancements
+
 always_tense = False    # toggle whether to show tensing of initial consonants that occur after final consonants
                             # initial consonants that occur after sonorants (non-obstruents, e.g. ㄶ, ㄼ)
                             # but should be tensed are automatically denoted as such
-na_neo_ye = True        # romanize 나의 and 너의 as "na-ye" and "neo-ye" respectively
+                            
+
+# now the fun begins
 
 initial_consonant_count = 19
 initial_consonant_phonetics = [
@@ -162,19 +176,26 @@ def romanize_word(word):
         if phoneme_list[prev_final] == 'x' or phoneme_list[next_initial] == 'x':
             continue
 
-        # special case: 꽃잎 becomes '꼰닢'
-        if word[syllable:syllable+2] == '꽃잎':
+        # special case: 네가 becomes "니가"
+        if ni_ga and word == '네가':
+            phoneme_list[prev_final - 1] = 'i'
+            continue
+
+        two_syllable = word[syllable:syllable+2]
+
+        # special case: 꽃잎 becomes "꼰닢"
+        if two_syllable == '꽃잎':
             phoneme_list[prev_final] = phoneme_list[next_initial] = 'n'
             continue
 
-        # special case: 맛없- becomes '맏 없'
-        if word[syllable:syllable+2] == '맛없':
+        # special case: 맛없- becomes "맏 없"
+        if two_syllable == '맛없':
             phoneme_list[prev_final] = 't'
             continue
 
-        # special cases: 설날, 줄넘기, 칼날 become 설랄, etc.
+        # special cases: 설날, 줄넘기, 칼날 become "설랄" etc.
         # N.B. I couldn't find a good rule for when ㄹㄴ assimilates in general
-        if word[syllable:syllable+2] in ('설날', '줄넘', '칼날'):
+        if two_syllable in ('설날', '줄넘', '칼날'):
             phoneme_list[next_initial] = 'l'
             continue
 
@@ -466,9 +487,9 @@ print(romanize("밟는 앞문 부엌문 낮말 낱말 학년 꽃나무 죽었니
 print(romanize("곧이듣다 얹히다 받히다 닫혀"))                  # palatalization
 print(romanize("남루하다 대통령 박람회 합력 설날 안락하다"))      # ㄹ assimilation
 print(romanize("좋다 입학 넓히다 싫소 옳지 싫다"))              # aspiration
-print(romanize("꽃잎은 맛없어요"))                            # special cases
+print(romanize("네가 맛을 보면 꽃잎이 맛없다고 할거야"))         # special cases
 print(romanize("그래요? 와, 진짜 멋지네요! 참..."))            # clause-final punctuation
-print(romanize("\"종이접기\"라는 '취미'예술"))                  # quotation marks
+print(romanize("\"종이접기\"라는 '취미'예술"))                 # quotation marks
 print(romanize("   "))                                      # edge case
 """
 
