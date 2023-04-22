@@ -1,7 +1,7 @@
 """
 Creator: Justin Park
 Email: justin.s.park77@gmail.com
-Last Updated: April 2, 2023
+Last Updated: April 20, 2023
 
 This script initializes the romanize() function which takes in a string of Hangul characters
 and outputs a proper romanization, obeying most sound change rules including nasalizations,
@@ -18,6 +18,7 @@ locations and romanizes any Hangul text in the input file line-by line, writing 
 text to the output file.
 
 Pronunciation rules have been sourced from the following webpages:
+https://en.wikipedia.org/wiki/Korean_phonology
 https://en.wikibooks.org/wiki/Korean/Advanced_Pronunciation_Rules
 https://www.korean.go.kr/front/onlineQna/onlineQnaView.do?mn_id=216&qna_seq=88058
 
@@ -53,7 +54,7 @@ ee = False              # romanize the vowel ㅣ as either 'ee' or 'i' (and like
 # optional non-standard romanization enhancements
 
 always_tense = False    # always show tensing of initial consonants that occur after final consonants
-                            # initial consonants that occur after sonorants (non-obstruents, e.g. ㄶ, ㄼ)
+                            # initial consonants that occur after sonorants (non-obstruents, e.g., ㄶ, ㄼ)
                             # but should be tensed are automatically denoted as such
                             
 
@@ -216,7 +217,7 @@ def romanize_word(word):
             continue
 
         # special case: semantic ㅇ linking
-        # (e.g. 꽃잎 becomes '꼰닢', 색연필 becomes '생년필')
+        # (e.g., 꽃잎 becomes '꼰닢', 색연필 becomes '생년필')
         # N.B. it's hard to generalize this because it depends on semantics
         if next_syllable in ('역', '잎') or two_syllable in ('맨입', '콩엿', '담요', '알약', '물약', '물엿') or three_syllable in ('한여름', '색연필'):
             phoneme_list[next_initial] = 'n'
@@ -336,11 +337,11 @@ def romanize_word(word):
 
         # linking
         if phoneme_list[next_initial] == '':
-            if final_carry == 'h':
+            if final_carry == 'h': # for syllables ending in ㅎ, ㄶ, and ㅀ
                 phoneme_list[next_initial] = final_change
                 final_change = ''
                 final_carry = ''
-            elif final_carry not in ('', 'ng'):
+            elif final_carry not in ('', 'ng'): # general linking case
                 phoneme_list[next_initial] = final_carry
                 final_carry = ''
 
@@ -352,6 +353,11 @@ def romanize_word(word):
         initial = 4*syllable
         vowel = 4*syllable + 1
         final = 4*syllable + 2
+        next_initial = initial + 4
+        next_vowel = vowel + 4
+
+        # flag that indicates if this syllable is the end of a word
+        not_last_syllable = (next_initial < len(phoneme_list))
 
         # syllable-final consonants
         tense = False
@@ -365,16 +371,17 @@ def romanize_word(word):
             phoneme_list[final] = 'n'
 
         elif phoneme_list[final] in ('d', 's', 'ss', 'j', 'ch', 't', 'h'):
-            phoneme_list[final] = 't'
-            tense = always_tense
+            if not_last_syllable and phoneme_list[next_initial] in ('s', 'ss'):
+                phoneme_list[final] = ''
+                phoneme_list[next_initial] = 'ss'
+            else:
+                phoneme_list[final] = 't'
+                tense = always_tense
 
         elif phoneme_list[final] == 'r':
             phoneme_list[final] = 'l'
-            try:
-               if phoneme_list[initial + 4] == 'r':
-                   phoneme_list[initial + 4] = 'l'
-            except IndexError:
-                pass
+            if not_last_syllable and phoneme_list[next_initial] == 'r':
+                phoneme_list[next_initial] = 'l'
 
         elif phoneme_list[final] in ('rs', 'rt', 'rh'):
             phoneme_list[final] = 'l'
@@ -384,10 +391,10 @@ def romanize_word(word):
             # special cases for ㄼ
             if phoneme_list[initial] == 'b' and phoneme_list[vowel] == 'a':
                 phoneme_list[final] = 'p'
-            elif phoneme_list[initial] == 'n' and phoneme_list[vowel] == 'eo':
-                if phoneme_list[initial + 4] == 'd' and phoneme_list[vowel + 4] == 'oo':
+            elif not_last_syllable and phoneme_list[initial] == 'n' and phoneme_list[vowel] == 'eo':
+                if phoneme_list[next_initial] == 'd' and phoneme_list[next_vowel] == 'oo':
                     phoneme_list[final] = 'p'
-                elif phoneme_list[initial + 4] == 'j' and phoneme_list[vowel + 4] in ('eo', 'oo'):
+                elif phoneme_list[next_initial] == 'j' and phoneme_list[next_vowel] in ('eo', 'oo'):
                     phoneme_list[final] = 'p'
 
             # flag that indicates if we entered a special case
@@ -413,18 +420,18 @@ def romanize_word(word):
             phoneme_list[final] = 'p'
             tense = always_tense
 
-        # tensing - some of these rules should depend on whether the final-consonant obstruent is the end of a word stem, but oh well
-        if tense and initial + 4 < len(phoneme_list):
-            if phoneme_list[initial + 4] == 'g':
-                phoneme_list[initial + 4] = 'kk'
-            elif phoneme_list[initial + 4] == 'd':
-                phoneme_list[initial + 4] = 'tt'
-            elif phoneme_list[initial + 4] == 'b':
-                phoneme_list[initial + 4] = 'pp'
-            elif phoneme_list[initial + 4] == 's':
-                phoneme_list[initial + 4] = 'ss'
-            elif phoneme_list[initial + 4] == 'j':
-                phoneme_list[initial + 4] = 'jj'
+        # tensing - there are more rules that depend on whether the final-consonant obstruent is the end of a word stem, but oh well
+        if not_last_syllable and tense:
+            if phoneme_list[next_initial] == 'g':
+                phoneme_list[next_initial] = 'kk'
+            elif phoneme_list[next_initial] == 'd':
+                phoneme_list[next_initial] = 'tt'
+            elif phoneme_list[next_initial] == 'b':
+                phoneme_list[next_initial] = 'pp'
+            elif phoneme_list[next_initial] == 's':
+                phoneme_list[next_initial] = 'ss'
+            elif phoneme_list[next_initial] == 'j':
+                phoneme_list[next_initial] = 'jj'
 
         # patch in non-Korean characters by handling placeholder
         if phoneme_list[initial] == 'x':
@@ -443,7 +450,7 @@ def romanize_word(word):
                         phoneme_list[initial - 1] = ''
 
                 # next character is also non-Korean
-                if phoneme_list[initial + 4] == 'x':
+                if phoneme_list[next_initial] == 'x':
                     phoneme_list[final + 1] = ''
             except IndexError:
                 pass
@@ -522,6 +529,7 @@ print(romanize("밝 밞 밝은 곳으로 갑쇼"))                      # genera
 print(romanize("밟는 앞문 부엌문 낮말 낱말 학년 꽃나무 죽었니"))  # nasalization
 print(romanize("곧이듣다 얹히다 받히다 닫혀"))                  # palatalization
 print(romanize("남루하다 대통령 박람회 합력 설날 안락하다"))      # ㄹ assimilation
+print(romanize("못생긴 햇살을 먹겠습니다. 맞습니다."))           # ㅅ/ㅆ assimmilation
 print(romanize("좋다 입학 넓히다 싫소 옳지 싫다"))               # aspiration
 print(romanize("네가 꽃잎의 맛을 보면 여권이 맛없다고 할거야"))   # special cases
 print(romanize("그래요? 와, 진짜 멋지네요! 참..."))            # clause-final punctuation
@@ -532,7 +540,9 @@ print(romanize("   "))                                      # edge case
 # exceptions: currently non-functional
 
 """
-print(split_hangul("안다 의견란"))
+print(split_hangul("안다 안고 감다 감고 신다 신고 참다 참고"))  # semantic tensing
+print(split_hangul("의견란"))
+
 """
 
 # considerations
