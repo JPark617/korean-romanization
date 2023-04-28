@@ -1,63 +1,26 @@
-"""
-Creator: Justin Park
-Email: justin.s.park77@gmail.com
-Last Updated: April 21, 2023
-
-This script initializes the romanize() function which takes in a string of Hangul characters
-and outputs a proper romanization, obeying most sound change rules including nasalizations,
-palatalizations, assimilations, linking, and syllable-final de-voicing/de-aspiration.
-
-Our romanization scheme modifies the Revised Romanzation of Korean (RR), the most commonly
-used and widely accepted Korean romanzation scheme worldwide. Importantly, RR strikes a balance
-between how the Hangul is written and how the spoken Korean sounds. Naturally, this comes with
-its benefits and drawbacks. The purpose of this script is to lean completely in one direction,
-prioritizing accurate transcription of speech over accurate transliteration of writing.
-
-As of 2022 Oct 9, this file also contains a romanize_file() function, which takes in two file
-locations and romanizes any Hangul text in the input file line-by line, writing the resulting
-text to the output file.
-
-Pronunciation rules have been sourced from the following webpages:
-https://en.wikipedia.org/wiki/Korean_phonology
-https://en.wikibooks.org/wiki/Korean/Advanced_Pronunciation_Rules
-https://www.korean.go.kr/front/onlineQna/onlineQnaView.do?mn_id=216&qna_seq=88058
-
-Not all sound change rules have been implemented; in particular, some rules which require an
-understanding of the semantics of the text are not fully considered for sake of simplicity.
-This code will probably also break spectacularly on certain newer words such as internet slang,
-text speak, abbreviations, and foreign loanwords.
-
-Learn how to pronounce the romanized text with this handy guide:
-https://docs.google.com/document/d/1XNkx1R6ImgwYNysgWlGWjXfG1Xzb6qSvdctRAhZvpis/edit?usp=sharing
-
-Other resources:
-https://en.wikipedia.org/wiki/Korean_language
-https://en.wikipedia.org/wiki/Hangul
-https://en.wikipedia.org/wiki/Revised_Romanization_of_Korean
-
-"""
+# CONFIGURATION PARAMETERS
 
 # situational romanization preferences
 
-na_neo_ye = True        # romanize 나의 and 너의 as 'na-ye' and 'neo-ye' respectively (common in sung Korean)
+na_neo_ye = False       # romanize 나의 and 너의 as 'na-ye' and 'neo-ye' respectively (common in songs)
 ne_ni = True            # romanize 네 as 'ni' and 네가 as 'ni-ga' (common in spoken Korean)
 
 
 # purely aesthetic romanization preferences
 
-show_h = 0              # 0 = don't show, 1 = show as 'ʰ', 2 = show as 'h'
-show_hada_h = True      # show 'h' for 하다, 한, 했다, etc.
+show_h = 0              # ㅎ-linking: 0 = don't show anything , 1 = show as 'ʰ', 2 = show as 'h'
+show_hada_h = True      # if True, always show 'h' for 하다, 한, 했다, etc.
                             # only matters if show_h == 0
-sh = True               # romanize ㅅ as 'sh' when preceding ㅣ, ㅑ, etc.
-oo = False              # romanize the vowel ㅜ as 'oo' instead of 'u' (and likewise for ㅠ, but not ㅟ)
-ee = False              # romanize the vowel ㅣ as either 'ee' or 'i' (and likewise for ㅟ, but not ㅚ or ㅢ)
+sh = True               # if True, romanize ㅅ as 'sh' when preceding ㅣ, ㅑ, etc.
+oo = False              # if True, romanize the vowel ㅜ as 'oo' instead of 'u' (and likewise for ㅠ, but not ㅟ)
+ee = False              # if True, romanize the vowel ㅣ as 'ee' instead of 'i' (and likewise for ㅟ, but not ㅚ or ㅢ)
 
 
 # optional non-standard romanization enhancements
 
 always_tense = False    # always show tensing of initial consonants that occur after final consonants
-                            # initial consonants that occur after sonorants (non-obstruents, e.g., ㄶ, ㄼ)
-                            # but should be tensed are automatically denoted as such
+                            # N.B. initial consonants that occur after sonorants (non-obstruents, e.g., ㄶ, ㄼ)
+                            # and consequently sound tensed are automatically always denoted as such
                             
 
 # now the fun begins
@@ -365,7 +328,7 @@ def romanize_word(word):
         # syllable-final consonants
         tense = False
 
-        if phoneme_list[final] in ('g', 'kk', 'gs', 'rg', 'k'):
+        if phoneme_list[final] in ('g', 'kk', 'gs', 'k'):
             phoneme_list[final] = 'k'
             tense = always_tense
 
@@ -376,7 +339,7 @@ def romanize_word(word):
         elif phoneme_list[final] in ('d', 's', 'ss', 'j', 'ch', 't', 'h'):
             if not_last_syllable and phoneme_list[next_initial] in ('s', 'ss'):
                 phoneme_list[final] = ''
-                phoneme_list[next_initial] = 'ss'
+                tense = True
             else:
                 phoneme_list[final] = 't'
                 tense = always_tense
@@ -386,14 +349,19 @@ def romanize_word(word):
             if not_last_syllable and phoneme_list[next_initial] == 'r':
                 phoneme_list[next_initial] = 'l'
 
-        elif phoneme_list[final] in ('rs', 'rt', 'rh'):
-            phoneme_list[final] = 'l'
-            tense = True
+        if phoneme_list[final] == 'rg':
+            if phoneme_list[next_initial] == 'g':
+                phoneme_list[final] = 'l'
+                tense = True
+            else:
+                phoneme_list[final] = 'k'
 
         elif phoneme_list[final] == 'rb':
-            # special cases for ㄼ
+            # special case: 밟 + consonant
             if phoneme_list[initial] == 'b' and phoneme_list[vowel] == 'a':
                 phoneme_list[final] = 'p'
+
+            # special case: 넓둥- and 넓죽-
             elif not_last_syllable and phoneme_list[initial] == 'n' and phoneme_list[vowel] == 'eo':
                 if phoneme_list[next_initial] == 'd' and phoneme_list[next_vowel] == 'oo':
                     phoneme_list[final] = 'p'
@@ -414,6 +382,10 @@ def romanize_word(word):
         elif phoneme_list[final] in ('rm', 'm'):
             tense = (phoneme_list[final] == 'rm')
             phoneme_list[final] = 'm'
+
+        elif phoneme_list[final] in ('rs', 'rt', 'rh'):
+            phoneme_list[final] = 'l'
+            tense = True
 
         elif phoneme_list[final] in ('b', 'p'):
             phoneme_list[final] = 'p'
