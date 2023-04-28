@@ -38,7 +38,7 @@ from korean_romanization import romanize as hangul_to_latin
 hangul_to_latin("동서남북")  # dong-seo-nam-buk
 ```
 
-Directly running the `korean_romanization.py` script will also start an interactive session which allows the user to quickly romanize individual lines of Hangul.
+Directly running the `korean_romanization.py` script will also start an interactive session which allows the user to quickly romanize individual lines of Hangul. (Ensure that the terminal in which you are running the session is configured to use UTF-8 to encode strings. Notably, [this is not the default for Git Bash on Windows](https://stackoverflow.com/questions/45660817/python-print-unicode-string-via-git-bash-gets-unicodeencodeerror).
 
 
 ## Resources
