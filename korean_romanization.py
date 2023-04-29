@@ -224,6 +224,24 @@ def romanize_word(word):
                     final_change = phoneme_list[final][0]
                     final_carry = phoneme_list[final][1]
 
+        # ㄹ assimilation
+        if phoneme_list[next_initial] == 'n':
+            # ㄹ + ㄴ -> 'l-l'
+            if final_carry == 'r':
+                phoneme_list[next_initial] = 'l'
+                final_carry = 'l'
+        elif phoneme_list[next_initial] == 'r':
+            match final_carry:
+                # ㄴ + ㄹ -> 'l-l', ㄹ + ㄹ -> 'l-l'
+                case 'n' | 'r':
+                    phoneme_list[next_initial] = 'l'
+                    final_carry = 'l'
+                case '':
+                    pass
+                # when following a consonant, ㄹ induces nasalization like ㄴ
+                case _:
+                    phoneme_list[next_initial] = 'n'
+
         # nasalization
         if phoneme_list[next_initial] in ('n', 'm'):
             match final_carry:
@@ -240,23 +258,6 @@ def romanize_word(word):
                     if final_change == 'b':
                         final_change = 'm'
                         final_carry = ''
-
-        # ㄹ assimilation
-        if phoneme_list[next_initial] == 'r':
-            match final_carry:
-                case 'g' | 'ng':
-                    phoneme_list[next_initial] = 'n'
-                    final_carry = 'ng'
-                case 'n':
-                    phoneme_list[next_initial] = 'l'
-                    final_carry = 'l'
-                case 'm' | 'b':
-                    phoneme_list[next_initial] = 'n'
-                    final_carry = 'm'
-        elif phoneme_list[next_initial] == 'n':
-            if final_carry == 'r':
-                phoneme_list[next_initial] = 'l'
-                final_carry = 'l'
 
         # palatalization
         # NOTE: this should only occur for 이, 히, 여, 혀 as grammatical particles, but oh well
