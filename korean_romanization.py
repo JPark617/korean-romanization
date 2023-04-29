@@ -8,7 +8,7 @@ ne_ni = True            # romanize 네 as 'ni' and 네가 as 'ni-ga' (common in 
 
 # purely aesthetic romanization preferences
 
-show_h = 0              # ㅎ-linking: 0 = don't show anything , 1 = show as 'ʰ', 2 = show as 'h'
+show_h = 0              # ㅎ linking: 0 = don't show anything (not prescriptive), 1 = show as 'ʰ', 2 = show as 'h'
 show_hada_h = True      # if True, always show 'h' for 하다, 한, 했다, etc.
                             # only matters if show_h == 0
 sh = True               # if True, romanize ㅅ as 'sh' when preceding ㅣ, ㅑ, etc.
@@ -168,54 +168,61 @@ def romanize_word(word):
 
     # first round of sound changes
     for syllable in range(len(word) - 1):
-        prev_final = 4*syllable + 2
-        next_initial = 4*syllable + 4
+        initial = 4*syllable
+        final = 4*syllable + 2
+        next_initial = initial + 4
 
-        if phoneme_list[prev_final] == 'x' or phoneme_list[next_initial] == 'x':
+        if phoneme_list[final] == 'x' or phoneme_list[next_initial] == 'x':
             continue
 
         two_syllable = word[syllable : syllable + 2]
         next_syllable = word[syllable + 1]
         next_two_syllable = word[syllable + 1 : syllable + 3]
 
-        # special case: 맛없- becomes 마덦-
-        if two_syllable == '맛없':
-            phoneme_list[prev_final] = ''
-            phoneme_list[next_initial] = 'd'
-            continue
-
-        # common compound words and Sino-Korean words that induce tensing
-        if two_syllable in ('글자', '발자', '발전', '여권', '절대'):
-            phoneme_list[next_initial] = tense_consonant(phoneme_list[next_initial])
-            continue
-
         # semantic ㅇ linking for compound words where the first half ends in a consonant
         # and the second (semantically meaningful) half begins with 야, 여, 요, 유, 이
         # (e.g., 꽃잎 becomes 꼰닢, 색연필 becomes 생년필)
         # NOTE: it's hard to generalize this because it depends on the semantics of the word
-        if two_syllable in ('담요', '들일', '막일', '맨입', '물약', '삯일', '알약') or \
-            phoneme_list[prev_final] != '' and (next_syllable in ('역', '염', '엿', '유', '율', '윷', '잎') \
-                                                or next_two_syllable in ('여름', '여비', '여성', '여우', '연필', '열차', '요기', '이불')):
+        if phoneme_list[final] != '' and (next_syllable in ('역', '염', '엿', '유', '율', '윷', '잎') \
+                                          or next_two_syllable in ('여름', '여비', '여성', '여우', '연필', '열차', '요기', '이불')):
             phoneme_list[next_initial] = 'n'
 
+        # special cases
+        match two_syllable:
+
+            # 맛없- becomes 마덦-
+            case '맛없':
+                phoneme_list[final] = ''
+                phoneme_list[next_initial] = 'd'
+                continue
+
+            # common compound words and Sino-Korean words that induce tensing
+            case '글자' | '발자' | '발전' | '여권' | '절대':
+                phoneme_list[next_initial] = tense_consonant(phoneme_list[next_initial])
+                continue
+
+            # more semantic ㅇ linking
+            case '담요' | '들일' | '막일' | '맨입' | '물약' | '삯일' | '알약':
+                phoneme_list[next_initial] = 'n'
+
         # preparing syllable-final consonants for sound changes
-        if len(phoneme_list[prev_final]) == 0:
+        if len(phoneme_list[final]) == 0:
             final_change = ''
             final_carry = ''
-        elif len(phoneme_list[prev_final]) == 1:
+        elif len(phoneme_list[final]) == 1:
             final_change = ''
-            final_carry = phoneme_list[prev_final]
+            final_carry = phoneme_list[final]
         else:
-            match phoneme_list[prev_final]:
+            match phoneme_list[final]:
                 case 'kk' | 'ss' | 'ng' | 'ch':
                     final_change = ''
-                    final_carry = phoneme_list[prev_final]
+                    final_carry = phoneme_list[final]
                 case 'rs':
                     final_change = 'r'
                     final_carry = 'v' # placeholder for ㄽ
                 case _:
-                    final_change = phoneme_list[prev_final][0]
-                    final_carry = phoneme_list[prev_final][1]
+                    final_change = phoneme_list[final][0]
+                    final_carry = phoneme_list[final][1]
 
         # nasalization
         if phoneme_list[next_initial] in ('n', 'm'):
@@ -282,7 +289,7 @@ def romanize_word(word):
                     phoneme_list[next_initial] = 'ch'
                     final_carry = ''
 
-        # more aspiration
+        # ㅎ linking
         if phoneme_list[next_initial] == 'h':
             match final_carry:
                 case 'g':
@@ -296,7 +303,6 @@ def romanize_word(word):
                     final_carry = ''
                 case _:
                     if show_h == 0:
-                        # ㅎ-linking (not prescriptive)
                         # if show_hada_h = True, create an exception for 하다, 한, 했다, etc.
                         # NOTE: this implementation is over-sensitive because it doesn't consider semantics
                         if not (show_hada_h and phoneme_list[next_initial + 1] in ('a', 'ae')):
@@ -334,7 +340,7 @@ def romanize_word(word):
                     final_carry = ''
 
         # handling standard cases
-        phoneme_list[prev_final] = final_change + final_carry
+        phoneme_list[final] = final_change + final_carry
 
     # second round of sound changes
     for syllable in range(len(word)):
@@ -345,8 +351,8 @@ def romanize_word(word):
         next_vowel = vowel + 4
 
         # flags that indicate the location of the syllable in the word
-        first_syllable = (syllable > 0)
-        last_syllable = (syllable < len(word) - 1)
+        first_syllable = (syllable == 0)
+        last_syllable = (syllable == len(word) - 1)
 
         # flag that indicates whether or not to tense the following initial consonant
         tense_next = False
@@ -531,7 +537,7 @@ print(romanize("좋다 입학 넓히다 싫소 옳지 싫다"))              # a
 print(romanize("네가 발자국 맛을 보면 여권 글자가 절대 맛없다"))  # special cases
 print(romanize("그래요? 와, 진짜 멋지네요! 참..."))             # clause-final punctuation
 print(romanize("\"종이접기\"라는 '취미'예술"))                  # quotation marks
-print(romanize("Korean is fun!  Tee샤츠"))                   # non-Korean
+print(romanize("??? Korean is fun! Tee샤츠"))                # non-Korean
 print(romanize("   "))                                      # edge case
 """
 
