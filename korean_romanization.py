@@ -14,12 +14,15 @@ show_hada_h = True      # if True, always show 'h' for 하다, 한, 했다, etc.
 sh = True               # if True, romanize ㅅ as 'sh' when preceding ㅣ, ㅑ, etc.
 oo = False              # if True, romanize the vowel ㅜ as 'oo' instead of 'u' (and likewise for ㅠ, but not ㅟ)
 ee = False              # if True, romanize the vowel ㅣ as 'ee' instead of 'i' (and likewise for ㅟ, but not ㅚ or ㅢ)
+no_y = False            # if True, remove the 'y' from the romanization of ㅑ, ㅕ, ㅛ, ㅠ when following ㅈ, ㅉ, ㅊ
+                            # NOTE: this configuration option exists because, for example, 자 and 쟈 sound extremely similar
+                            # and so some people might not find it critical for their use case to distinguish between the two
 
 
 # optional non-standard romanization enhancements
 
 always_tense = False    # always show tensing of initial consonants that occur after final consonants
-                            # N.B. initial consonants that occur after sonorants (non-obstruents, e.g., ㄶ, ㄼ)
+                            # NOTE: initial consonants that occur after sonorants (non-obstruents, e.g., ㄶ, ㄼ)
                             # and consequently sound tensed are automatically always denoted as such
                             
 
@@ -109,20 +112,21 @@ hangul_blocks = 44032
 block_count = 11172
 
 
-def tense(phoneme):
-    if phoneme == 'g': return 'kk'
-    if phoneme == 'd': return 'tt'
-    if phoneme == 'b': return 'pp'
-    if phoneme == 's': return 'ss'
-    if phoneme == 'j': return 'jj'
-    return phoneme
+def tense_consonant(phoneme):
+    match phoneme:
+        case 'g': return 'kk'
+        case 'd': return 'tt'
+        case 'b': return 'pp'
+        case 's': return 'ss'
+        case 'j': return 'jj'
+        case _: return phoneme
 
 
 def romanize_word(word):
     if len(word) == 0:
         return ''
 
-    # special case: 네 becomes '니'
+    # special case: 네 -> '니'
     if ne_ni:
         if word == '네':
             return 'ni'
@@ -139,7 +143,7 @@ def romanize_word(word):
             phoneme_list.append('')
             if syllable == 0:
                 phoneme_list.append('q') # placeholder for non-modified ㅢ
-            elif syllable == len(word) - 1: # 의 -> '에'  –  should be only for grammatical particle, but not sure how to code that
+            elif syllable == len(word) - 1: # 의 -> '에' (NOTE: technically, this only applies to the grammatical particle 의)
                 if na_neo_ye and syllable == 1 and word[0] in ('나', '너'):
                     phoneme_list.append('ye')
                 else:
@@ -174,7 +178,7 @@ def romanize_word(word):
         next_syllable = word[syllable + 1]
         next_two_syllable = word[syllable + 1 : syllable + 3]
 
-        # special case: 맛없- becomes '마덦-'
+        # special case: 맛없- becomes 마덦-
         if two_syllable == '맛없':
             phoneme_list[prev_final] = ''
             phoneme_list[next_initial] = 'd'
@@ -182,13 +186,13 @@ def romanize_word(word):
 
         # common compound words and Sino-Korean words that induce tensing
         if two_syllable in ('글자', '발자', '발전', '여권', '절대'):
-            phoneme_list[next_initial] = tense(phoneme_list[next_initial])
+            phoneme_list[next_initial] = tense_consonant(phoneme_list[next_initial])
             continue
 
-        # special case: semantic ㅇ linking for compound words where the first half ends in a consonant
+        # semantic ㅇ linking for compound words where the first half ends in a consonant
         # and the second (semantically meaningful) half begins with 야, 여, 요, 유, 이
-        # (e.g., 꽃잎 becomes '꼰닢', 색연필 becomes '생년필')
-        # N.B. it's hard to generalize this because it depends on the semantics of the word
+        # (e.g., 꽃잎 becomes 꼰닢, 색연필 becomes 생년필)
+        # NOTE: it's hard to generalize this because it depends on the semantics of the word
         if two_syllable in ('담요', '들일', '막일', '맨입', '물약', '삯일', '알약') or \
             phoneme_list[prev_final] != '' and (next_syllable in ('역', '염', '엿', '유', '율', '윷', '잎') \
                                                 or next_two_syllable in ('여름', '여비', '여성', '여우', '연필', '열차', '요기', '이불')):
@@ -201,46 +205,54 @@ def romanize_word(word):
         elif len(phoneme_list[prev_final]) == 1:
             final_change = ''
             final_carry = phoneme_list[prev_final]
-        elif phoneme_list[prev_final] in ('kk', 'ss', 'ng', 'ch'):
-            final_change = ''
-            final_carry = phoneme_list[prev_final]
-        elif phoneme_list[prev_final] == 'rs':
-            final_change = 'r'
-            final_carry = 'v' # placeholder for ㄽ
         else:
-            final_change = phoneme_list[prev_final][0]
-            final_carry = phoneme_list[prev_final][1]
+            match phoneme_list[prev_final]:
+                case 'kk' | 'ss' | 'ng' | 'ch':
+                    final_change = ''
+                    final_carry = phoneme_list[prev_final]
+                case 'rs':
+                    final_change = 'r'
+                    final_carry = 'v' # placeholder for ㄽ
+                case _:
+                    final_change = phoneme_list[prev_final][0]
+                    final_carry = phoneme_list[prev_final][1]
 
         # nasalization
         if phoneme_list[next_initial] in ('n', 'm'):
-            if final_carry in ('g', 'kk', 'k'):
-                final_change = 'ng'
-                final_carry = ''
-            elif final_change == 'b' or final_carry in ('b', 'pp', 'p'):
-                final_change = 'm'
-                final_carry = ''
-            elif final_carry in ('d', 's', 'ss', 'j', 'ch', 't', 'h'):
-                final_change = 'n'
-                final_carry = ''
+            match final_carry:
+                case 'g' | 'kk' | 'k':
+                    final_change = 'ng'
+                    final_carry = ''
+                case 'b' | 'pp' | 'p':
+                    final_change = 'm'
+                    final_carry = ''
+                case 'd' | 's' | 'ss' | 'j' | 'ch' | 't' | 'h':
+                    final_change = 'n'
+                    final_carry = ''
+                case _:
+                    if final_change == 'b':
+                        final_change = 'm'
+                        final_carry = ''
 
         # ㄹ assimilation
         if phoneme_list[next_initial] == 'r':
-            if final_carry in ('g', 'ng'):
-                phoneme_list[next_initial] = 'n'
-                final_carry = 'ng'
-            elif final_carry in ('m', 'b'):
-                phoneme_list[next_initial] = 'n'
-                final_carry = 'm'
-            elif final_carry == 'n':
-                phoneme_list[next_initial] = 'l'
-                final_carry = 'l'
+            match final_carry:
+                case 'g' | 'ng':
+                    phoneme_list[next_initial] = 'n'
+                    final_carry = 'ng'
+                case 'n':
+                    phoneme_list[next_initial] = 'l'
+                    final_carry = 'l'
+                case 'm' | 'b':
+                    phoneme_list[next_initial] = 'n'
+                    final_carry = 'm'
         elif phoneme_list[next_initial] == 'n':
             if final_carry == 'r':
                 phoneme_list[next_initial] = 'l'
                 final_carry = 'l'
 
         # palatalization
-        # N.B. this should only occur for 이, 히, 여, 혀 as grammatical particles, but oh well
+        # NOTE: this should only occur for 이, 히, 여, 혀 as grammatical particles, but oh well
         if phoneme_list[next_initial + 1] in ('i', 'yeo'):
             if phoneme_list[next_initial] == '':
                 if final_carry == 'd':
@@ -256,64 +268,70 @@ def romanize_word(word):
 
         # aspiration
         if final_carry == 'h':
-            if phoneme_list[next_initial] == 'g':
-                phoneme_list[next_initial] = 'k'
-                final_carry = ''
-            if phoneme_list[next_initial] == 'd':
-                phoneme_list[next_initial] = 't'
-                final_carry = ''
-            if phoneme_list[next_initial] == 's':
-                phoneme_list[next_initial] = 'ss'
-                final_carry = ''
-            if phoneme_list[next_initial] == 'j':
-                phoneme_list[next_initial] = 'ch'
-                final_carry = ''
+            match phoneme_list[next_initial]:
+                case 'g':
+                    phoneme_list[next_initial] = 'k'
+                    final_carry = ''
+                case 'd':
+                    phoneme_list[next_initial] = 't'
+                    final_carry = ''
+                case 's':
+                    phoneme_list[next_initial] = 'ss'
+                    final_carry = ''
+                case 'j':
+                    phoneme_list[next_initial] = 'ch'
+                    final_carry = ''
 
         # more aspiration
         if phoneme_list[next_initial] == 'h':
-            if final_carry == 'g':
-                phoneme_list[next_initial] = 'k'
-                final_carry = ''
-            elif final_carry in ('d', 's', 'ss', 'j', 'ch', 'v'):
-                phoneme_list[next_initial] = 't'
-                final_carry = ''
-            elif final_carry == 'b':
-                phoneme_list[next_initial] = 'p'
-                final_carry = ''
-            else:
-                if show_h == 0:
-                    # ㅎ-linking (not prescriptive)
-                    # if show_hada_h = True, create an exception for 하다, 한, 했다, etc.
-                    # N.B. this exception is over-sensitive because it doesn't consider semantics
-                    if not (show_hada_h and phoneme_list[next_initial + 1] in ('a', 'ae')):
-                        if final_carry not in ('', 'ng'):
-                            phoneme_list[next_initial] = final_carry
-                            final_carry = ''
-                        else:
-                            phoneme_list[next_initial] = ''
-                elif show_h == 1:
-                    phoneme_list[next_initial] = 'ʰ'
+            match final_carry:
+                case 'g':
+                    phoneme_list[next_initial] = 'k'
+                    final_carry = ''
+                case 'd' | 's' | 'ss' | 'j' | 'ch' | 'v':
+                    phoneme_list[next_initial] = 't'
+                    final_carry = ''
+                case 'b':
+                    phoneme_list[next_initial] = 'p'
+                    final_carry = ''
+                case _:
+                    if show_h == 0:
+                        # ㅎ-linking (not prescriptive)
+                        # if show_hada_h = True, create an exception for 하다, 한, 했다, etc.
+                        # NOTE: this implementation is over-sensitive because it doesn't consider semantics
+                        if not (show_hada_h and phoneme_list[next_initial + 1] in ('a', 'ae')):
+                            if final_carry not in ('', 'ng'):
+                                phoneme_list[next_initial] = final_carry
+                                final_carry = ''
+                            else:
+                                phoneme_list[next_initial] = ''
+                    elif show_h == 1:
+                        phoneme_list[next_initial] = 'ʰ'
 
         # handling placeholder for ㄽ
         if final_carry == 'v':
-            if phoneme_list[next_initial] == '': # ㄽ + ㅇ = ㄹ + ㅆ
-                phoneme_list[next_initial] = 'ss'
-                final_carry = ''
-            elif phoneme_list[next_initial] == 'b': # ㄽ + ㅂ = ㄹ + ㅃ
-                phoneme_list[next_initial] = 'pp'
-                final_carry = ''
-            else:
-                final_carry = ''
+            match phoneme_list[next_initial]:
+                case '': # ㄽ + ㅇ -> ㄹ + ㅆ
+                    phoneme_list[next_initial] = 'ss'
+                    final_carry = ''
+                case 'b': # ㄽ + ㅂ -> ㄹ + ㅃ
+                    phoneme_list[next_initial] = 'pp'
+                    final_carry = ''
+                case _:
+                    final_carry = ''
 
         # linking
         if phoneme_list[next_initial] == '':
-            if final_carry == 'h': # for syllables ending in ㅎ, ㄶ, and ㅀ
-                phoneme_list[next_initial] = final_change
-                final_change = ''
-                final_carry = ''
-            elif final_carry not in ('', 'ng'): # general linking case
-                phoneme_list[next_initial] = final_carry
-                final_carry = ''
+            match final_carry:
+                case 'h': # for syllables ending in ㅎ, ㄶ, and ㅀ
+                    phoneme_list[next_initial] = final_change
+                    final_change = ''
+                    final_carry = ''
+                case '' | 'ng':
+                    pass
+                case _: # general linking case
+                    phoneme_list[next_initial] = final_carry
+                    final_carry = ''
 
         # handling standard cases
         phoneme_list[prev_final] = final_change + final_carry
@@ -326,133 +344,142 @@ def romanize_word(word):
         next_initial = initial + 4
         next_vowel = vowel + 4
 
-        # flag that indicates if this syllable is the end of a word
-        not_last_syllable = (next_initial < len(phoneme_list))
+        # flags that indicate the location of the syllable in the word
+        first_syllable = (syllable > 0)
+        last_syllable = (syllable < len(word) - 1)
 
         # flag that indicates whether or not to tense the following initial consonant
         tense_next = False
 
         # syllable-final consonants
-        if phoneme_list[final] in ('g', 'kk', 'gs', 'k'):
-            phoneme_list[final] = 'k'
-            tense_next = always_tense
+        match phoneme_list[final]:
 
-        elif phoneme_list[final] in ('n', 'nj', 'nh'):
-            tense_next = (phoneme_list[final] == 'nj')
-            phoneme_list[final] = 'n'
-
-        elif phoneme_list[final] in ('d', 's', 'ss', 'j', 'ch', 't', 'h'):
-            if not_last_syllable and phoneme_list[next_initial] in ('s', 'ss'):
-                phoneme_list[final] = ''
-                tense_next = True
-            else:
-                phoneme_list[final] = 't'
+            # ㄱ, ㄲ, ㄳ, ㅋ -> 'k'
+            case 'g' | 'kk' | 'gs' | 'k':
+                phoneme_list[final] = 'k'
                 tense_next = always_tense
 
-        elif phoneme_list[final] == 'r':
-            phoneme_list[final] = 'l'
-            if not_last_syllable and phoneme_list[next_initial] == 'r':
-                phoneme_list[next_initial] = 'l'
+            # ㄴ, ㄵ, ㄶ -> 'n'
+            case 'n' | 'nj' | 'nh':
+                tense_next = (phoneme_list[final] == 'nj')
+                phoneme_list[final] = 'n'
 
-        if phoneme_list[final] == 'rg':
-            if phoneme_list[next_initial] == 'g':
+            # ㄷ, ㅅ, ㅆ, ㅈ, ㅊ, ㅌ, ㅎ -> 't'
+            case 'd' | 's' | 'ss' | 'j' | 'ch' | 't' | 'h':
+                if not last_syllable and phoneme_list[next_initial] in ('s', 'ss'):
+                    phoneme_list[final] = ''
+                    tense_next = True
+                else:
+                    phoneme_list[final] = 't'
+                    tense_next = always_tense
+
+            # ㄹ -> l
+            case 'r':
+                phoneme_list[final] = 'l'
+                # ㄹ + ㄹ -> 'l-l'
+                if not last_syllable and phoneme_list[next_initial] == 'r':
+                    phoneme_list[next_initial] = 'l'
+
+            # ㄺ
+            case 'rg':
+                # ㄺ + ㄱ -> 'l-kk'
+                if not last_syllable and phoneme_list[next_initial] == 'g':
+                    phoneme_list[final] = 'l'
+                    tense_next = True
+                # ㄺ -> 'k'
+                else:
+                    phoneme_list[final] = 'k'
+
+            # ㄻ, ㅁ -> 'm'
+            case 'rm' | 'm':
+                tense_next = (phoneme_list[final] == 'rm')
+                phoneme_list[final] = 'm'
+
+            # ㄼ
+            case 'rb':
+                # special case: 밟 + consonant
+                if phoneme_list[initial] == 'b' and phoneme_list[vowel] == 'a':
+                    phoneme_list[final] = 'p'
+
+                # special case: 넓둥- and 넓죽-
+                elif not last_syllable and phoneme_list[initial] == 'n' and phoneme_list[vowel] == 'eo':
+                    if phoneme_list[next_initial] == 'd' and phoneme_list[next_vowel] == 'oo':
+                        phoneme_list[final] = 'p'
+                    elif phoneme_list[next_initial] == 'j' and phoneme_list[next_vowel] in ('eo', 'oo'):
+                        phoneme_list[final] = 'p'
+
+                # flag that indicates if we entered a special case
+                rb_special = (phoneme_list[final] == 'p')
+
+                # default: ㄼ -> ㄹ
+                if not rb_special:
+                    phoneme_list[final] = 'l'
+
+                # ㄼ always tenses the next consonant (regardless of if it becomes 'ㅍ' or 'ㄹ')
+                # but always_tense decides if we include the in our output for the special 'ㅍ' cases
+                tense_next = always_tense or not rb_special
+
+            # ㄽ, ㄾ, ㅀ -> 'l'
+            case 'rs' | 'rt' | 'rh':
                 phoneme_list[final] = 'l'
                 tense_next = True
-            else:
-                phoneme_list[final] = 'k'
 
-        elif phoneme_list[final] == 'rb':
-            # special case: 밟 + consonant
-            if phoneme_list[initial] == 'b' and phoneme_list[vowel] == 'a':
+            # ㄿ, ㅂ, ㅄ, ㅍ -> 'p'
+            case 'rp' | 'b' | 'bs' | 'p':
                 phoneme_list[final] = 'p'
-
-            # special case: 넓둥- and 넓죽-
-            elif not_last_syllable and phoneme_list[initial] == 'n' and phoneme_list[vowel] == 'eo':
-                if phoneme_list[next_initial] == 'd' and phoneme_list[next_vowel] == 'oo':
-                    phoneme_list[final] = 'p'
-                elif phoneme_list[next_initial] == 'j' and phoneme_list[next_vowel] in ('eo', 'oo'):
-                    phoneme_list[final] = 'p'
-
-            # flag that indicates if we entered a special case
-            rb_special = (phoneme_list[final] == 'p')
-
-            # ㄼ becomes ㄹ by default
-            if not rb_special:
-                phoneme_list[final] = 'l'
-
-            # ㄼ always tenses the next consonant (regardless of if it becomes 'ㅍ' or 'ㄹ')
-            # but always_tense decides if we include the in our output for the special 'ㅍ' cases
-            tense_next = always_tense or not rb_special 
-
-        elif phoneme_list[final] in ('rm', 'm'):
-            tense_next = (phoneme_list[final] == 'rm')
-            phoneme_list[final] = 'm'
-
-        elif phoneme_list[final] in ('rs', 'rt', 'rh'):
-            phoneme_list[final] = 'l'
-            tense_next = True
-
-        elif phoneme_list[final] in ('b', 'p'):
-            phoneme_list[final] = 'p'
-            tense_next = always_tense
-
-        elif phoneme_list[final] in ('bs', 'rp'):
-            phoneme_list[final] = 'p'
-            tense_next = always_tense
+                tense_next = always_tense
 
         # tensing
-        if not_last_syllable and tense_next:
-            phoneme_list[next_initial] = tense(phoneme_list[next_initial])
+        if not last_syllable and tense_next:
+            phoneme_list[next_initial] = tense_consonant(phoneme_list[next_initial])
 
         # patching in non-Korean characters by handling placeholder
         if phoneme_list[initial] == 'x':
             phoneme_list[initial] = ''
             phoneme_list[final] = ''
-            try:
-                # punctuation at the end of a clause
-                if phoneme_list[vowel] in ('!', ',', '.', '?'):
-                    phoneme_list[initial - 1] = ''
-
-                # quotation marks
-                if phoneme_list[vowel] in ('\'', '"'):
-                    if initial == 0:
-                        phoneme_list[final + 1] = ''
-                    else:
-                        phoneme_list[initial - 1] = ''
-
-                # next character is also non-Korean
-                if phoneme_list[next_initial] == 'x':
-                    phoneme_list[final + 1] = ''
-            except IndexError:
-                pass
-            continue
-
-        if len(phoneme_list[vowel]) == 0:
-            continue
             
+            # punctuation at the end of a clause
+            if not first_syllable and phoneme_list[vowel] in ('!', ',', '.', '?'):
+                phoneme_list[initial - 1] = ''
+
+            # quotation marks
+            if phoneme_list[vowel] in ('\'', '"'):
+                if not first_syllable:
+                    phoneme_list[initial - 1] = ''
+                else:
+                    phoneme_list[final + 1] = ''
+
+            # next character is also non-Korean
+            if not last_syllable and phoneme_list[next_initial] == 'x':
+                phoneme_list[final + 1] = ''
+            
+            continue
+
+        # different pronuniciations of ㅢ
         if phoneme_list[vowel] == 'ui': # common sound change; occurs for everything except word-initial and grammatical 의
             phoneme_list[vowel] = 'i'
         elif phoneme_list[vowel] == 'q': # deal with placeholder
             phoneme_list[vowel] = 'ui'
-            
-        if sh and phoneme_list[initial] in ('s', 'ss'): # add 'h' to certain ㅅ, ㅆ sounds for more intuitive pronunciation
+
+        # if desired, add 'h' to certain ㅅ, ㅆ sounds for more intuitive pronunciation
+        if sh and phoneme_list[initial] in ('s', 'ss'):
             if phoneme_list[vowel] in ('i', 'wi'):
                 phoneme_list[initial] += 'h'
             elif phoneme_list[vowel][0] == 'y':
                 phoneme_list[initial] += 'h'
                 phoneme_list[vowel] = phoneme_list[vowel][1:]
 
-        if phoneme_list[initial] in ('j', 'jj', 'ch'): # remove 'y' from ㅈ, ㅉ, ㅊ sounds
-            if phoneme_list[vowel][0] == 'y':
-                phoneme_list[vowel] = phoneme_list[4*syllable + 1][1:]
+        # if desired, write ㅣ as 'ee' instead of 'i'
+        if not oo and phoneme_list[vowel] in ('oo', 'yoo'):
+            phoneme_list[vowel] = phoneme_list[vowel][0:-2] + 'u'
 
-        if not oo:
-            if phoneme_list[vowel] in ('oo', 'yoo'):
-                phoneme_list[vowel] = phoneme_list[vowel][0:-2] + 'u'
+        # if desired, write ㅣ as 'ee' instead of 'i'
+        if ee and phoneme_list[vowel] in ('i', 'wi'):
+            phoneme_list[vowel] = phoneme_list[vowel][0:-1] + 'ee'
 
-        if ee:
-            if phoneme_list[vowel] in ('i', 'wi'):
-                phoneme_list[vowel] = phoneme_list[vowel][0:-1] + 'ee'
+        # if desired, remove 'y' from ㅑ, ㅕ, ㅛ, ㅠ after ㅈ, ㅉ, ㅊ
+        if no_y and phoneme_list[initial] in ('j', 'jj', 'ch') and phoneme_list[vowel][0] == 'y':
+            phoneme_list[vowel] = phoneme_list[4*syllable + 1][1:]
 
     # return combined result
     phoneme_list.pop()
@@ -476,12 +503,9 @@ def romanize(hangul_string):
 
 def romanize_file(hangul_in, romanized_out):
     # read Hangul text from file
-    with open(hangul_in, 'r', encoding='utf8') as reader:
-        original_text = reader.readlines()
-
-    # write romanization to file
-    with open(romanized_out, 'w', encoding='utf8') as writer:
-        for line in original_text:
+    with open(hangul_in, 'r', encoding='utf8') as reader, \
+         open(romanized_out, 'w', encoding='utf8') as writer:
+        for line in reader:
             writer.write(romanize(line) + '\n')
 
 

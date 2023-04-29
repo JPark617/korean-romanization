@@ -41,6 +41,11 @@ hangul_to_latin("동서남북")  # dong-seo-nam-buk
 Directly running the `korean_romanization.py` script will also start an interactive session which allows the user to quickly romanize individual lines of Hangul. (Ensure that the terminal in which you are running the session is configured to use UTF-8 to encode strings. Notably, [this is not the default for Git Bash on Windows](https://stackoverflow.com/questions/45660817/python-print-unicode-string-via-git-bash-gets-unicodeencodeerror).
 
 
+## Compatibility
+
+This script requires Python 3.10 or above.
+
+
 ## Resources
 
 Learn how to pronounce the romanized text with [this handy guide](https://docs.google.com/document/d/1XNkx1R6ImgwYNysgWlGWjXfG1Xzb6qSvdctRAhZvpis/edit?usp=sharing)!
