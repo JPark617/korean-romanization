@@ -135,7 +135,7 @@ def romanize_word(word):
 
     phoneme_list = []
     
-    # parse Hangul and convert to "naive" letter-by-letter romanization
+    # parsing Hangul and converting to "naive" letter-by-letter romanization
     for syllable in range(len(word)):
         block_ord = ord(word[syllable]) - hangul_blocks
 
@@ -467,7 +467,7 @@ def romanize_word(word):
         elif phoneme_list[vowel] == 'q': # deal with placeholder
             phoneme_list[vowel] = 'ui'
 
-        # if desired, add 'h' to certain ㅅ, ㅆ sounds for more intuitive pronunciation
+        # 시 -> 'shi'/'si', 샤 -> 'sha'/'sya', etc. (based on configuration)
         if sh and phoneme_list[initial] in ('s', 'ss'):
             if phoneme_list[vowel] in ('i', 'wi'):
                 phoneme_list[initial] += 'h'
@@ -475,20 +475,19 @@ def romanize_word(word):
                 phoneme_list[initial] += 'h'
                 phoneme_list[vowel] = phoneme_list[vowel][1:]
 
-        # if desired, write ㅣ as 'ee' instead of 'i'
+        # ㅜ -> 'oo'/'u', ㅠ -> 'yoo'/'yu' (based on configuration)
         if not oo and phoneme_list[vowel] in ('oo', 'yoo'):
             phoneme_list[vowel] = phoneme_list[vowel][0:-2] + 'u'
 
-        # if desired, write ㅣ as 'ee' instead of 'i'
+        # ㅣ -> 'ee'/'i' (based on configuration)
         if ee and phoneme_list[vowel] in ('i', 'wi'):
             phoneme_list[vowel] = phoneme_list[vowel][0:-1] + 'ee'
 
-        # if desired, remove 'y' from ㅑ, ㅕ, ㅛ, ㅠ after ㅈ, ㅉ, ㅊ
+        # 쟈 -> 'ja'/'jya', 쳐 -> 'cheo'/'chyeo', etc. (based on configuration)
         if no_y and phoneme_list[initial] in ('j', 'jj', 'ch') and phoneme_list[vowel][0] == 'y':
             phoneme_list[vowel] = phoneme_list[4*syllable + 1][1:]
 
-    # return combined result
-    phoneme_list.pop()
+    phoneme_list.pop() # trailing hyphen
     return(''.join(phoneme_list))
 
 
@@ -508,7 +507,6 @@ def romanize(hangul_string):
 
 
 def romanize_file(hangul_in, romanized_out):
-    # read Hangul text from file
     with open(hangul_in, 'r', encoding='utf8') as reader, \
          open(romanized_out, 'w', encoding='utf8') as writer:
         for line in reader:
@@ -546,13 +544,6 @@ print(romanize("   "))                                      # edge case
 """
 print(split_hangul("안다 안고 감다 감고 신다 신고 참다 참고"))  # semantic tensing
 print(split_hangul("의견란 영업용"))
-
-"""
-
-# considerations
-
-"""
-쉬 -> swi? shi? shwi? sui? shui?
 """
 
 
