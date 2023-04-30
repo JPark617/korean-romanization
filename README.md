@@ -53,9 +53,9 @@ Learn how to pronounce the romanized text with [this handy guide](https://docs.g
 Pronuniciation rules have been sourced from the following webpages:
 - [Korean phonology – Wikipedia](https://en.wikipedia.org/wiki/Korean_phonology)
 - [Advanced Korean Pronuniciation Rules – Wikibooks](https://en.wikibooks.org/wiki/Korean/Advanced_Pronunciation_Rules)
-- [표준 발음법](http://www.tufs.ac.jp/ts/personal/choes/korean/nanboku/Barum.html)
+- [표준 발음법 – 조의성](http://www.tufs.ac.jp/ts/personal/choes/korean/nanboku/Barum.html)
 
 Other relevant resources:
 - [Korean language – Wikipedia](https://en.wikipedia.org/wiki/Korean_language)
 - [Hangul – Wikipedia](https://en.wikipedia.org/wiki/Hangul)
-- https://en.wikipedia.org/wiki/Revised_Romanization_of_Korean
+- [Revised Romanization of Korean – Wikipedia](https://en.wikipedia.org/wiki/Revised_Romanization_of_Korean)
