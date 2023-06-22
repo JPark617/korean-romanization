@@ -46,6 +46,30 @@ hangul_romanizer.romanize("동서남북")    # dong-seo-nam-buk
 This script requires Python 3.10 or above.
 
 
+## Testing
+
+Making local edits and want to test your code? First ensure that you have pytest installed:
+```
+$ pytest --version
+pytest 7.3.2
+```
+
+If your command line does not display a version number 7.3.0 or higher, install/update pytest:
+```
+$ pip install -U pytest
+```
+
+To run the full suite of unit tests on this module, simply navigate to the main directory in your command line and run `pytest` (default output) or `pytest -q` ("quiet" reporting mode):
+```
+$ pytest -q
+...                                                                      [100%]
+1 passed in 0.17s
+```
+
+The test files are located in the `tests/` directory.
+Check out the [pytest documentation](https://docs.pytest.org/en/7.3.x/) for information on how to run select test functions or write your own test cases.
+
+
 ## Resources
 
 Learn how to pronounce the romanized text with [this handy guide](https://docs.google.com/document/d/1XNkx1R6ImgwYNysgWlGWjXfG1Xzb6qSvdctRAhZvpis/edit?usp=sharing)!
