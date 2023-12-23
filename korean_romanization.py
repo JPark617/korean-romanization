@@ -79,7 +79,7 @@ class HangulRomanizer:
         'wi',
         'yoo',
         'eu',
-        'ui',
+        'eui',
         'i'
     ]
 
@@ -148,13 +148,13 @@ class HangulRomanizer:
                 phoneme_list.append('')
                 if syllable == 0:
                     phoneme_list.append('q') # placeholder for non-modified ㅢ
-                elif syllable == len(word) - 1: # 의 -> '에' (NOTE: technically, this only applies to the grammatical particle 의)
+                elif syllable == len(word) - 1: # 의 -> '에' (NOTE: this should only apply to the grammatical particle 의)
                     if self.na_neo_ye and syllable == 1 and word[0] in ('나', '너'):
                         phoneme_list.append('ye')
                     else:
                         phoneme_list.append('e')
                 else:
-                    phoneme_list.append('ui')
+                    phoneme_list.append('eui')
                 phoneme_list.append('')
             elif 0 <= block_ord < HangulRomanizer.block_count:
                 final = HangulRomanizer.final_consonant_phonetics[block_ord % HangulRomanizer.final_consonant_count]
@@ -196,13 +196,13 @@ class HangulRomanizer:
             match two_syllable:
 
                 # 맛없- becomes 마덦-
-                case '맛없':
+                case '끝없' | '맛없':
                     phoneme_list[final] = ''
                     phoneme_list[next_initial] = 'd'
                     continue
 
                 # common compound words and Sino-Korean words that induce tensing
-                case '글자' | '될지' | '발자' | '발전' | '여권' | '을지' | '절대' | '할지':
+                case '글자' | '될지' | '발자' | '발전' | '실제' | '여권' | '을지' | '절대' | '할지':
                     phoneme_list[next_initial] = HangulRomanizer.tense_consonant(phoneme_list[next_initial])
                     continue
 
@@ -219,7 +219,7 @@ class HangulRomanizer:
                 final_carry = phoneme_list[final]
             else:
                 match phoneme_list[final]:
-                    case 'kk' | 'ss' | 'ng' | 'ch':
+                    case 'kk' | 'gs' | 'bs' | 'ss' | 'ng' | 'ch':
                         final_change = ''
                         final_carry = phoneme_list[final]
                     case 'rs':
@@ -250,19 +250,18 @@ class HangulRomanizer:
             # nasalization
             if phoneme_list[next_initial] in ('n', 'm'):
                 match final_carry:
-                    case 'g' | 'kk' | 'k':
+                    case 'g' | 'kk' | 'gs' | 'k':
                         final_change = 'ng'
                         final_carry = ''
-                    case 'b' | 'pp' | 'p':
+                    case 'b' | 'bs' | 'p':
                         final_change = 'm'
                         final_carry = ''
                     case 'd' | 's' | 'ss' | 'j' | 'ch' | 't' | 'h':
                         final_change = 'n'
                         final_carry = ''
-                    case _:
+                    case '':
                         if final_change == 'b':
                             final_change = 'm'
-                            final_carry = ''
 
             # palatalization
             # NOTE: this should only occur for 이, 히, 여, 혀 as grammatical particles, but oh well
@@ -298,13 +297,13 @@ class HangulRomanizer:
             # ㅎ linking
             if phoneme_list[next_initial] == 'h':
                 match final_carry:
-                    case 'g':
+                    case 'g' | 'kk' | 'gs':
                         phoneme_list[next_initial] = 'k'
                         final_carry = ''
                     case 'd' | 's' | 'ss' | 'j' | 'ch' | 'v':
                         phoneme_list[next_initial] = 't'
                         final_carry = ''
-                    case 'b':
+                    case 'b' | 'bs':
                         phoneme_list[next_initial] = 'p'
                         final_carry = ''
                     case _:
@@ -335,12 +334,16 @@ class HangulRomanizer:
             # linking
             if phoneme_list[next_initial] == '':
                 match final_carry:
+                    case 'ks' | 'bs':
+                        phoneme_list[next_initial] = 's'
+                        final_change = final_carry[0]
+                        final_carry = ''
+                    case '' | 'ng':
+                        pass
                     case 'h': # for syllables ending in ㅎ, ㄶ, and ㅀ
                         phoneme_list[next_initial] = final_change
                         final_change = ''
                         final_carry = ''
-                    case '' | 'ng':
-                        pass
                     case _: # general linking case
                         phoneme_list[next_initial] = final_carry
                         final_carry = ''
@@ -468,10 +471,10 @@ class HangulRomanizer:
                 continue
 
             # different pronuniciations of ㅢ
-            if phoneme_list[vowel] == 'ui': # common sound change; occurs for everything except word-initial and grammatical 의
+            if phoneme_list[vowel] == 'eui': # common sound change; occurs for everything except word-initial and grammatical 의
                 phoneme_list[vowel] = 'i'
             elif phoneme_list[vowel] == 'q': # deal with placeholder
-                phoneme_list[vowel] = 'ui'
+                phoneme_list[vowel] = 'eui'
 
             # tensed consonants: ㄲ -> 'gg'/'kk', ㄸ -> 'dd'/'tt', ㅃ -> 'bb'/'pp'
             if self.voiced_double:
