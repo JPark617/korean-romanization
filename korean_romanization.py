@@ -98,7 +98,7 @@ class HangulRomanizer:
 
     
     def __init__(self, na_neo_ye: bool = False, ne_ni: bool = True, \
-                 show_h: int = 0, show_hada_h: bool = True, sh: bool = True, oo: bool = False, ee: bool = False, \
+                 show_h: int = 0, show_hada_h: bool = True, voiced_double: bool = False, sh: bool = True, oo: bool = False, ee: bool = False, \
                  always_tense: bool = False, no_y: bool = False):
 
         # situational romanization preferences
@@ -112,6 +112,7 @@ class HangulRomanizer:
                                                 # 0 = don't show anything (not prescriptive), 1 = show as 'ʰ', 2 = show as 'h'
         self.show_hada_h = show_hada_h      # if True, always show 'h' for 하다 and its conjugations (e.g., 한, 했다)
                                                 # only matters if self.show_h == 0
+        self.voiced_double = voiced_double  # if True, romanize ㄲ, ㄸ, ㅃ as 'gg', 'dd', 'bb' instead of 'kk', 'tt', 'pp'
         self.sh = sh                        # if True, romanize ㅅ as 'sh' when preceding ㅣ, ㅑ, etc.
         self.oo = oo                        # if True, romanize the vowel ㅜ as 'oo' instead of 'u' (and likewise for ㅠ, but not ㅟ)
         self.ee = ee                        # if True, romanize the vowel ㅣ as 'ee' instead of 'i' (and likewise for ㅟ, but not ㅚ or ㅢ)
@@ -201,7 +202,7 @@ class HangulRomanizer:
                     continue
 
                 # common compound words and Sino-Korean words that induce tensing
-                case '글자' | '발자' | '발전' | '여권' | '절대':
+                case '글자' | '될지' | '발자' | '발전' | '여권' | '을지' | '절대' | '할지':
                     phoneme_list[next_initial] = HangulRomanizer.tense_consonant(phoneme_list[next_initial])
                     continue
 
@@ -471,6 +472,16 @@ class HangulRomanizer:
                 phoneme_list[vowel] = 'i'
             elif phoneme_list[vowel] == 'q': # deal with placeholder
                 phoneme_list[vowel] = 'ui'
+
+            # tensed consonants: ㄲ -> 'gg'/'kk', ㄸ -> 'dd'/'tt', ㅃ -> 'bb'/'pp'
+            if self.voiced_double:
+                match phoneme_list[initial]:
+                    case 'kk':
+                        phoneme_list[initial] = 'gg'
+                    case 'tt':
+                        phoneme_list[initial] = 'dd'
+                    case 'pp':
+                        phoneme_list[initial] = 'bb'
 
             # 시 -> 'shi'/'si', 샤 -> 'sha'/'sya', etc. (based on configuration)
             if self.sh and phoneme_list[initial] in ('s', 'ss'):
